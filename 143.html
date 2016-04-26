@@ -3,7 +3,7 @@
 	<head>
 		<title>143 Assignment</title>
 		<meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
-		<link rel="stylesheet" type="text/css" href="http://mbostock.github.io/d3/talk/20111018/style.css">
+		<link rel="stylesheet" type="text/css" href="style.css">
 		<script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>
 		<script type="http://mbostock.github.io/d3/talk/20111018/d3/d3.layout.js"></script>
 		<style type="text/css">
@@ -23,6 +23,7 @@
 			  stroke: #ccc;
 			  stroke-width: 1.5px;
 			}
+
 	    </style>
 	</head>
 	<body style="background-color: #F8F8F8">
@@ -31,8 +32,59 @@
 				Informatics 143
 				<div class="hint">click or option-click to expand or collapse</div>
 			</div>
+			<div id="statSection">
+				Statistics
+
+				<ol id="facts">
+					<li id="studentsEachMajor"></li>
+					<li id="averageGrade"></li>
+					<li id="leastCommonGrade"></li>
+					<li id="mostCommonGrade"></li>
+				</ol>
+			</div>
 		</div>
 		<script type="text/javascript">
+
+			function Majors(){
+				this.majors = {};
+			}
+
+			Majors.prototype.addMajor = function(major, numberStudents, grade) {
+				if (!(major in this.majors)){
+					this.majors[major] = {
+						students: numberStudents,
+						totalGrade: grade
+					}
+				}
+				else{
+					this.majors[major].students += numberStudents;
+					this.majors[major].totalGrade += grade;
+				}
+			};
+
+			function MajorsAveragesObject(){
+				this.averages = {};
+			}
+
+			
+			MajorsAveragesObject.prototype.addMajor = function(major, average) {
+				this.averages[major] = average;
+			};
+
+			function LetterGrade() {
+				this.letterGrades = {
+					A: 0,
+					B: 0,
+					C: 0,
+					D: 0,
+					F: 0
+				};
+			}
+
+			LetterGrade.prototype.incrementLetter = function(letter){
+				this.letterGrades[letter] += 1;
+			};
+
 			var matrix = [20, 120, 20, 120],
 		    w = 1280 - matrix[1] - matrix[3],
 		    h = 800 - matrix[0] - matrix[2],
@@ -69,17 +121,56 @@
 					.key(function(d) { return d.studentID; })
 					.entries(data)
 				};
-
-				var totalStudentsEachMajor = d3.nest()
-					.rollup(function(students) { return students.length; })
-					.entries(data);
 				
-				var averageGradeEachMajor = d3.nest()
+				var majorsObect = new Majors();
+				var majorAveragesObject = new MajorsAveragesObject();
+				var letterGrades = new LetterGrade();
+
+				var studentEachMajor = d3.nest()
 					.key(function(d) { return d.standing; })
 					.key(function(d) { return d.major; })
+					.rollup(function(d) { 
+						for (var i = 0; i < d.length; i++) {
+							var infoObject = d[i];
+							majorsObect.addMajor(infoObject.major, 1, d[i].grade);
+							letterGrades.incrementLetter(infoObject.letter);
+						}
+						return d.length; 
+					})
 					.entries(data);
 
-				console.log(JSON.stringify(averageGradeEachMajor));
+				function computeMajorAverages(majors) {
+					for(var major in majors){
+						var infoObject = majors[major];
+						majorAveragesObject.addMajor(major, Math.round((infoObject.totalGrade/infoObject.students)));
+					}
+				}
+
+				function computerLeastCommonLetterGrade(letterGrades){
+					var commonLetter;
+					var min = 10000;
+					for (var letter in letterGrades){
+						var grade = letterGrades[letter];
+						if (grade < min){
+							commonLetter = letter;
+							min = grade;
+						}
+					}
+					return commonLetter;
+				}
+
+				function computeMostCommonLetterGrade(letterGrades){
+					var commonLetter;
+					var max = 0;
+					for (var letter in letterGrades){
+						var grade = letterGrades[letter];
+						if (grade > max){
+							commonLetter = letter;
+							max = grade;
+						}
+					}
+					return commonLetter;
+				}
 
 				var treeData2 = { "name": "students", "children":
 					treeData.values.map(function(standing){
@@ -107,12 +198,32 @@
 					})
 				};
 
-				// console.log(JSON.stringify(treeData2));
 
+
+				computeMajorAverages(majorAveragesObject.averages);
+				computeMajorAverages(majorsObect.majors);
+
+
+				var leastCommonLetterGrade = computerLeastCommonLetterGrade(letterGrades.letterGrades);
+				var mostCommonLetterGrade = computeMostCommonLetterGrade(letterGrades.letterGrades);
 				
+				var firstStat = document.getElementById('studentsEachMajor');
+				for (var major in majorsObect.majors){
+					var infoObject = majorsObect.majors[major];
+					var str = major + ' number of students: ' + infoObject.students + '</br>';
+					firstStat.innerHTML += str;
+				}
 
-				console.log('\n');
-				console.log(treeData2);
+				var secondStat = document.getElementById('averageGrade');
+				for(var major in majorAveragesObject.averages){
+					var str = major + ' average grade: ' + majorAveragesObject.averages[major] + '</br>';
+					secondStat.innerHTML += str;
+				}
+				var thirdStat = document.getElementById('leastCommonGrade');
+				thirdStat.innerHTML = 'Least Common Grade: ' + leastCommonLetterGrade;
+
+				var fourthStat = document.getElementById('mostCommonGrade');
+				fourthStat.innerHTML = 'Most Common Grade: ' + mostCommonLetterGrade;
 
 				root = treeData2;
 				root.x0 = h / 2;
