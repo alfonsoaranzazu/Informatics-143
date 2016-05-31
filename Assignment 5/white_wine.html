@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+body {
+  font: 10px sans-serif;
+}
+
+label{
+  padding: 10px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.dot {
+  stroke: #000;
+}
+
+</style>
+<body>
+  <h1 style="display: inline-block">White Wine Scatterplot</h1>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Fixed Acidity">Fixed Acidity</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Volatile Acidity">Volatile Acidity</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Citric Acid">Citric Acidity</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Residual Sugar">Residual Sugar</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Chlorides">Chlorides</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Free Sulfur Dioxide">Free Sulfur Dioxide</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Total Sulfur Dioxide">Total Sulfur Dioxide</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Density">Density</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="PH">pH Level</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Sulphates">Sulphates</label>
+  <label class="radio-inline"><input type="radio" name="optradio" onclick="loadData(this.id)" id="Alcohol">Alcohol</label>
+  <br>
+  <h3 style="font-weight: normal">*All input variable options are relative to the quality of the white whine sampled.</h3>
+</body>
+<script src="//d3js.org/d3.v3.min.js"></script>
+<script>
+
+var margin = {top: 20, right: 20, bottom: 30, left: 40},
+    width = 1260 - margin.left - margin.right,
+    height = 500 - margin.top - margin.bottom;
+
+var x = d3.scale.linear()
+    .range([0, width]);
+
+var y = d3.scale.linear()
+    .range([height, 0]);
+
+var color = d3.scale.category10();
+
+var xAxis = d3.svg.axis()
+    .scale(x)
+    .orient("bottom");
+
+var yAxis = d3.svg.axis()
+    .scale(y)
+    .orient("left");
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+
+var inputEnum = {
+  "Fixed Acidity": 0,
+  "Volatile Acidity": 1,
+  "Citric Acid": 2,
+  "Residual Sugar": 3,
+  "Chlorides": 4,
+  "Free Sulfur Dioxide": 5,
+  "Total Sulfur Dioxide": 6,
+  "Density": 7,
+  "PH": 8,
+  "Sulphates": 9,
+  "Alcohol": 10,
+  "Quality": 11
+};
+
+function loadData(radioID) {
+    svg.selectAll("*").remove();
+
+    d3.csv("data/winequality-white.csv", function(error, wineData){
+      var data = [];
+      var dataIndex = 0;
+
+      console.log(wineData);
+
+      wineData.forEach(function(d){
+
+        var rawNumbers = d["Fixed Acidity"].split(";");
+        
+        var inputs = {};
+        inputs[radioID] = rawNumbers[inputEnum[radioID]];
+        inputs["Quality"] = rawNumbers[inputEnum["Quality"]];
+        data[dataIndex++] = inputs;
+      });
+
+      data.forEach(function(d){
+          d[radioID] = +d[radioID];
+          d.Quality = +d.Quality;
+      });
+
+      // console.log(data);
+
+      x.domain(d3.extent(data, function(d) { return d.Quality; })).nice();
+      y.domain(d3.extent(data, function(d) { return d[radioID]; })).nice();
+
+      svg.append("g")
+          .attr("class", "x axis")
+          .attr("transform", "translate(0," + height + ")")
+          .call(xAxis)
+        .append("text")
+          .attr("class", "label")
+          .attr("x", width)
+          .attr("y", -6)
+          .style("text-anchor", "end")
+          .text("Wine Quality");
+
+      svg.append("g")
+          .attr("class", "y axis")
+          .call(yAxis)
+        .append("text")
+          .attr("class", "label")
+          .attr("transform", "rotate(-90)")
+          .attr("y", 6)
+          .attr("dy", ".71em")
+          .style("text-anchor", "end")
+          .text(radioID)
+
+      svg.selectAll(".dot")
+          .data(data)
+        .enter().append("circle")
+          .attr("class", "dot")
+          .attr("r", 3.5)
+          .attr("cx", function(d) { return x(d.Quality); })
+          .attr("cy", function(d) { return y(d[radioID]); })
+          .style("fill", function(d) { return color(radioID); });
+
+      var legend = svg.selectAll(".legend")
+          .data(color.domain())
+        .enter().append("g")
+          .attr("class", "legend")
+          .attr("transform", function(d, i) { return "translate(0," + i * 20 + ")"; });
+
+      legend.append("rect")
+          .attr("x", width - 18)
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", color);
+
+      legend.append("text")
+          .attr("x", width - 24)
+          .attr("y", 9)
+          .attr("dy", ".35em")
+          .style("text-anchor", "end")
+          .text(function(d) { return d; });
+
+    });
+}
+
+
+
+</script>
